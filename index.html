@@ -92,7 +92,37 @@
         tijd: new Date().toLocaleString()
       };
       console.log("Incheckgegevens:", data);
-      alert("✅ Je bent succesvol ingecheckt! (Let op: deze demo slaat nog niets op.)");
+      function verzenden(event) {
+  event.preventDefault();
+  const data = {
+    voornaam: document.getElementById('voornaam').value,
+    achternaam: document.getElementById('achternaam').value,
+    studentnummer: document.getElementById('studentnummer').value,
+    email: document.getElementById('email').value,
+    tijd: new Date().toLocaleString()
+  };
+
+  fetch("kun je dit https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec ", {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  .then(response => {
+    if (response.ok) {
+      alert("✅ Je bent succesvol ingecheckt!");
+      document.querySelector("form").reset();
+      document.getElementById("formulier").style.display = "none";
+    } else {
+      alert("❌ Er ging iets mis bij het opslaan.");
+    }
+  })
+  .catch(error => {
+    alert("❌ Fout bij verzenden: " + error);
+  });
+}
+
       document.querySelector("form").reset();
       document.getElementById("formulier").style.display = "none";
     }
