@@ -12,7 +12,7 @@
 </head>
 <body>
   <h2>Check-in Leslocatie</h2>
-  <p>Deze check-in werkt alleen op de juiste locatie. Klik hieronder om je locatie te controleren.</p>
+  <p>Deze check-in werkt alleen op goedgekeurde locaties. Klik hieronder om je locatie te controleren.</p>
   <button onclick="checkLocation()">Check Locatie</button>
   <div id="status"></div>
 
@@ -31,9 +31,12 @@
   </div>
 
   <script>
-    const lokaalLat = 52.0682;   // Pas aan naar je locatie
-    const lokaalLng = 4.3248;
-    const maxAfstand = 200;      // In meters
+    // Toegestane locaties: school + thuis
+    const locaties = [
+      { lat: 52.0682, lng: 4.3248 },        // Haagse Hogeschool
+      { lat: 52.0360341, lng: 4.3623357 }   // Thuis
+    ];
+    const maxAfstand = 300; // in meters
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -52,13 +55,22 @@
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            const afstand = afstandInMeters(lat, lon, lokaalLat, lokaalLng);
             const status = document.getElementById('status');
-            if (afstand < maxAfstand) {
-              status.textContent = `✅ Locatie bevestigd (${Math.round(afstand)} meter). Vul nu je gegevens in.`;
+
+            let goedgekeurd = false;
+            for (const locatie of locaties) {
+              const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
+              if (afstand < maxAfstand) {
+                goedgekeurd = true;
+                break;
+              }
+            }
+
+            if (goedgekeurd) {
+              status.textContent = "✅ Locatie bevestigd. Vul nu je gegevens in.";
               document.getElementById('formulier').style.display = 'block';
             } else {
-              status.textContent = `❌ Je bent niet op de juiste locatie (${Math.round(afstand)} meter).`;
+              status.textContent = `❌ Je bent niet op een goedgekeurde locatie.`;
             }
           },
           () => {
