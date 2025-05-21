@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
-    input, label, button { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
+    input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
   </style>
@@ -18,6 +18,17 @@
 
   <div id="formulier">
     <form onsubmit="verzenden(event)">
+      <label>Voor welke les check je in?</label>
+      <select id="les" required>
+        <option value="">-- Kies een les --</option>
+        <option value="PL1">PL1</option>
+        <option value="PL2">PL2</option>
+        <option value="PL|s">PL|s</option>
+        <option value="Skills">Skills</option>
+        <option value="Wissel-les">Wissel-les</option>
+        <option value="MB">MB</option>
+      </select>
+
       <label>Voornaam:</label>
       <input type="text" id="voornaam" required>
       <label>Achternaam:</label>
@@ -31,12 +42,11 @@
   </div>
 
   <script>
-    // Toegestane locaties: school + thuis
     const locaties = [
-      { lat: 52.0682, lng: 4.3248 },        // Haagse Hogeschool
-      { lat: 52.0360341, lng: 4.3623357 }   // Thuis
+      { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
+      { lat: 52.0360341, lng: 4.3623357 }    // Thuis
     ];
-    const maxAfstand = 300; // in meters
+    const maxAfstand = 300;
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -85,46 +95,33 @@
     function verzenden(event) {
       event.preventDefault();
       const data = {
+        les: document.getElementById('les').value,
         voornaam: document.getElementById('voornaam').value,
         achternaam: document.getElementById('achternaam').value,
         studentnummer: document.getElementById('studentnummer').value,
         email: document.getElementById('email').value,
         tijd: new Date().toLocaleString()
       };
-      console.log("Incheckgegevens:", data);
-      function verzenden(event) {
-  event.preventDefault();
-  const data = {
-    voornaam: document.getElementById('voornaam').value,
-    achternaam: document.getElementById('achternaam').value,
-    studentnummer: document.getElementById('studentnummer').value,
-    email: document.getElementById('email').value,
-    tijd: new Date().toLocaleString()
-  };
 
-  fetch("kun je dit https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec ", {
-    method: "POST",
-    body: JSON.stringify(data),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => {
-    if (response.ok) {
-      alert("✅ Je bent succesvol ingecheckt!");
-      document.querySelector("form").reset();
-      document.getElementById("formulier").style.display = "none";
-    } else {
-      alert("❌ Er ging iets mis bij het opslaan.");
-    }
-  })
-  .catch(error => {
-    alert("❌ Fout bij verzenden: " + error);
-  });
-}
-
-      document.querySelector("form").reset();
-      document.getElementById("formulier").style.display = "none";
+      fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          alert("✅ Je bent succesvol ingecheckt!");
+          document.querySelector("form").reset();
+          document.getElementById("formulier").style.display = "none";
+        } else {
+          alert("❌ Er ging iets mis bij het opslaan.");
+        }
+      })
+      .catch(error => {
+        alert("❌ Fout bij verzenden: " + error);
+      });
     }
   </script>
 </body>
