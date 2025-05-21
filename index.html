@@ -19,13 +19,15 @@
   <div id="formulier">
     <form onsubmit="verzenden(event)">
       <label>Wat is je voornaam?</label>
-      <input type="text" id="voornaam" required>
+      <input type="text" id="voornaam" name="voornaam" required>
       <label>En je achternaam?</label>
-      <input type="text" id="achternaam" required>
+      <input type="text" id="achternaam" name="achternaam" required>
       <label>Wat is je studentnummer?</label>
-      <input type="text" id="studentnummer" required>
+      <input type="text" id="studentnummer" name="studentnummer" required>
       <label>En je e-mailadres?</label>
-      <input type="email" id="email" required>
+      <input type="email" id="email" name="email" required>
+      <input type="hidden" id="lat" name="lat">
+      <input type="hidden" id="lng" name="lng">
       <button type="submit">✅ Inchecken</button>
     </form>
   </div>
@@ -35,7 +37,7 @@
       { lat: 52.0682, lng: 4.3248 },
       { lat: 52.0360341, lng: 4.3623357 }
     ];
-    const maxAfstand = 300;
+    const maxAfstand = 300; // meters
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -54,6 +56,9 @@
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
+            // Zet lat/lng in verborgen velden
+            document.getElementById('lat').value = lat;
+            document.getElementById('lng').value = lon;
             const status = document.getElementById('status');
 
             let goedgekeurd = false;
@@ -83,26 +88,21 @@
 
     function verzenden(event) {
       event.preventDefault();
-      const data = {
-        voornaam: document.getElementById('voornaam').value,
-        achternaam: document.getElementById('achternaam').value,
-        studentnummer: document.getElementById('studentnummer').value,
-        email: document.getElementById('email').value,
-        tijd: new Date().toLocaleString()
-      };
+      const form = event.target;
+      const formData = new FormData(form);
+      formData.append('tijd', new Date().toLocaleString());
 
       fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
         method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json"
-        }
+        body: formData
+        // Let op: géén 'Content-Type' hier!
       })
       .then(response => {
         if (response.ok) {
           alert("✅ Je bent ingecheckt. Dankjewel!");
-          document.querySelector("form").reset();
+          form.reset();
           document.getElementById("formulier").style.display = "none";
+          document.getElementById("status").textContent = "";
         } else {
           alert("❌ Oei! Het opslaan ging mis.");
         }
@@ -114,4 +114,3 @@
   </script>
 </body>
 </html>
-
