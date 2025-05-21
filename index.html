@@ -8,6 +8,8 @@
     input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
+    #foutmelding { color: red; margin-top: 15px; }
+    #succesmelding { color: green; margin-top: 15px; }
   </style>
 </head>
 <body>
@@ -39,6 +41,8 @@
       <input type="email" id="email" required>
       <button type="submit">Check in</button>
     </form>
+    <div id="foutmelding"></div>
+    <div id="succesmelding"></div>
   </div>
 
   <script>
@@ -47,6 +51,7 @@
       { lat: 52.0360341, lng: 4.3623357 }    // Thuis
     ];
     const maxAfstand = 300;
+    let laatsteGPS = null;
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -60,13 +65,13 @@
     }
 
     function checkLocation() {
+      document.getElementById('status').textContent = "Locatie wordt opgehaald...";
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            const status = document.getElementById('status');
-
+            laatsteGPS = { lat, lon }; // sla GPS op
             let goedgekeurd = false;
             for (const locatie of locaties) {
               const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
@@ -75,12 +80,12 @@
                 break;
               }
             }
-
             if (goedgekeurd) {
-              status.textContent = "✅ Locatie bevestigd. Vul nu je gegevens in.";
+              document.getElementById('status').textContent = "✅ Locatie bevestigd. Vul nu je gegevens in.";
               document.getElementById('formulier').style.display = 'block';
             } else {
-              status.textContent = `❌ Je bent niet op een goedgekeurde locatie.`;
+              document.getElementById('status').textContent = `❌ Je bent niet op een goedgekeurde locatie.`;
+              document.getElementById('formulier').style.display = 'none';
             }
           },
           () => {
@@ -92,49 +97,48 @@
       }
     }
 
-  function verzenden(event) {
-  event.preventDefault();
-  const data = {
-    les: document.getElementById('les').value,
-    voornaam: document.getElementById('voornaam').value,
-    achternaam: document.getElementById('achternaam').value,
-    studentnummer: document.getElementById('studentnummer').value,
-    email: document.getElementById('email').value,
-    tijd: new Date().toLocaleString()
-  };
+    function verzenden(event) {
+      event.preventDefault();
+      document.getElementById('foutmelding').textContent = "";
+      document.getElementById('succesmelding').textContent = "";
 
-  fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
-    method: "POST",
-    body: JSON.stringify(data),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Netwerkantwoord was niet oké');
-    }
-    return response.json();
-  })
-  .then(result => {
-    alert('Verstuurd!');
-  })
-  .catch(error => {
-    alert('Fout bij verzenden: ' + error.message);
-    console.error('Foutdetails:', error);
-  });
-}
-      .then(response => {
-        if (response.ok) {
-          alert("✅ Je bent succesvol ingecheckt!");
-          document.querySelector("form").reset();
-          document.getElementById("formulier").style.display = "none";
-        } else {
-          alert("❌ Er ging iets mis bij het opslaan.");
+      if (!laatsteGPS) {
+        document.getElementById('foutmelding').textContent = 'GPS niet gevonden. Klik eerst op "Check Locatie".';
+        return;
+      }
+
+      const data = {
+        les: document.getElementById('les').value,
+        voornaam: document.getElementById('voornaam').value,
+        achternaam: document.getElementById('achternaam').value,
+        studentnummer: document.getElementById('studentnummer').value,
+        email: document.getElementById('email').value,
+        tijd: new Date().toLocaleString(),
+        gps: laatsteGPS.lat + ',' + laatsteGPS.lon
+      };
+
+      fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json"
         }
       })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Netwerkantwoord was niet oké');
+        }
+        return response.json();
+      })
+      .then(result => {
+        document.getElementById('succesmelding').textContent = '✅ Je bent succesvol ingecheckt!';
+        document.querySelector("form").reset();
+        document.getElementById("formulier").style.display = "none";
+        document.getElementById("status").textContent = "";
+        laatsteGPS = null;
+      })
       .catch(error => {
-        alert("❌ Fout bij verzenden: " + error);
+        document.getElementById('foutmelding').textContent = 'Fout bij verzenden: ' + error.message;
       });
     }
   </script>
