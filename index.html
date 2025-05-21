@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check-in met GPS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+    input, label, button { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
+    #formulier { display: none; }
+    #status { font-weight: bold; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>Check-in Leslocatie</h2>
+  <p>Deze check-in werkt alleen op de juiste locatie. Klik hieronder om je locatie te controleren.</p>
+  <button onclick="checkLocation()">Check Locatie</button>
+  <div id="status"></div>
+
+  <div id="formulier">
+    <form onsubmit="verzenden(event)">
+      <label>Voornaam:</label>
+      <input type="text" id="voornaam" required>
+      <label>Achternaam:</label>
+      <input type="text" id="achternaam" required>
+      <label>Studentnummer:</label>
+      <input type="text" id="studentnummer" required>
+      <label>E-mailadres:</label>
+      <input type="email" id="email" required>
+      <button type="submit">Check in</button>
+    </form>
+  </div>
+
+  <script>
+    const lokaalLat = 52.0682;   // Pas aan naar je locatie
+    const lokaalLng = 4.3248;
+    const maxAfstand = 200;      // In meters
+
+    function afstandInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function checkLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const afstand = afstandInMeters(lat, lon, lokaalLat, lokaalLng);
+            const status = document.getElementById('status');
+            if (afstand < maxAfstand) {
+              status.textContent = `✅ Locatie bevestigd (${Math.round(afstand)} meter). Vul nu je gegevens in.`;
+              document.getElementById('formulier').style.display = 'block';
+            } else {
+              status.textContent = `❌ Je bent niet op de juiste locatie (${Math.round(afstand)} meter).`;
+            }
+          },
+          () => {
+            document.getElementById('status').textContent = 'Locatie ophalen mislukt of geweigerd.';
+          }
+        );
+      } else {
+        document.getElementById('status').textContent = 'GPS niet ondersteund op dit apparaat.';
+      }
+    }
+
+    function verzenden(event) {
+      event.preventDefault();
+      const data = {
+        voornaam: document.getElementById('voornaam').value,
+        achternaam: document.getElementById('achternaam').value,
+        studentnummer: document.getElementById('studentnummer').value,
+        email: document.getElementById('email').value,
+        tijd: new Date().toLocaleString()
+      };
+      console.log("Incheckgegevens:", data);
+      alert("✅ Je bent succesvol ingecheckt! (Let op: deze demo slaat nog niets op.)");
+      document.querySelector("form").reset();
+      document.getElementById("formulier").style.display = "none";
+    }
+  </script>
+</body>
+</html>
