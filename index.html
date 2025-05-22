@@ -12,8 +12,8 @@
 </head>
 <body>
   <h2>Check-in</h2>
-  <p>Ben je op school of thuis? Klik op de knop hieronder om te kijken of je op de juiste plek bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn plek</button>
+  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste lokatie bent om in te checken :-).</p>
+  <button onclick="checkLocation()">📍 Check mijn lokatie</button>
   <div id="status"></div>
 
   <div id="formulier">
@@ -37,7 +37,7 @@
       { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
       { lat: 52.0360341, lng: 4.3623357 }    // Thuis
     ];
-    const maxAfstand = 200; // meters (aangepast!)
+    const maxAfstand = 200;
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -93,6 +93,15 @@
 
     function verzenden(event) {
       event.preventDefault();
+
+      const vandaag = new Date().toISOString().split("T")[0];
+      const laatstIngecheckt = localStorage.getItem("checkin_datum");
+
+      if (laatstIngecheckt === vandaag) {
+        alert("⏳ Je hebt vandaag al ingecheckt op dit apparaat.");
+        return;
+      }
+
       const form = event.target;
       const formData = new FormData(form);
       formData.append('tijd', new Date().toLocaleString());
@@ -101,12 +110,16 @@
         method: "POST",
         body: formData
       })
-      .then(response => {
-        if (response.ok) {
+      .then(response => response.text())
+      .then(text => {
+        if (text === "OK") {
           alert("✅ Je bent ingecheckt. Dankjewel!");
+          localStorage.setItem("checkin_datum", vandaag);
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
+        } else if (text === "AL_GEDAAN_VANDAAG") {
+          alert("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).");
         } else {
           alert("❌ Oei! Het opslaan ging mis.");
         }
