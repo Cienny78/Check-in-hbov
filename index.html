@@ -34,10 +34,10 @@
 
   <script>
     const locaties = [
-      { lat: 52.0682, lng: 4.3248 },
-      { lat: 52.0360341, lng: 4.3623357 }
+      { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
+      { lat: 52.0360341, lng: 4.3623357 }    // Thuis
     ];
-    const maxAfstand = 300; // meters
+    const maxAfstand = 200; // meters (aangepast!)
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -45,8 +45,8 @@
       const φ2 = lat2 * Math.PI / 180;
       const Δφ = (lat2 - lat1) * Math.PI / 180;
       const Δλ = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
@@ -56,17 +56,21 @@
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            // Zet lat/lng in verborgen velden
             document.getElementById('lat').value = lat;
             document.getElementById('lng').value = lon;
             const status = document.getElementById('status');
 
             let goedgekeurd = false;
+            let kortsteAfstand = Infinity;
+
             for (const locatie of locaties) {
               const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
               if (afstand < maxAfstand) {
                 goedgekeurd = true;
                 break;
+              }
+              if (afstand < kortsteAfstand) {
+                kortsteAfstand = afstand;
               }
             }
 
@@ -74,7 +78,8 @@
               status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
               document.getElementById('formulier').style.display = 'block';
             } else {
-              status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek.`;
+              const afgerond = Math.round(kortsteAfstand);
+              status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
             }
           },
           () => {
@@ -95,7 +100,6 @@
       fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
         method: "POST",
         body: formData
-        // Let op: géén 'Content-Type' hier!
       })
       .then(response => {
         if (response.ok) {
