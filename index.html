@@ -8,12 +8,14 @@
     input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
+    #retryButton { display: none; }
   </style>
 </head>
 <body>
   <h2>Check-in PL1 of PL2 </h2>
-  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste lokatie bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn lokatie</button>
+  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
+  <button onclick="checkLocation()">📍 Check mijn locatie</button>
+  <button id="retryButton" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
   <div id="status"></div>
 
   <div id="formulier">
@@ -32,14 +34,11 @@
     </form>
   </div>
 
-   <script>
-    // Geef elk formulier een unieke ID, bijvoorbeeld de lesnaam of code
-    const formId = "PL"; // Pas dit aan per formulier!
-
+  <script>
     const locaties = [
-       { lat: 52.0682, lng: 4.3248 },           // Haagse Hogeschool
-  { lat: 52.0360341, lng: 4.3623357 },     // Thuis (voorbeeld)
-  { lat: 52.0668769, lng: 4.3235892 }      // Skillslab
+      { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
+      { lat: 52.0360341, lng: 4.3623357 },   // Thuis (voorbeeld)
+      { lat: 52.0668769, lng: 4.3235892 }    // Skillslab
     ];
     const maxAfstand = 250; // meters
 
@@ -55,44 +54,63 @@
     }
 
     function checkLocation() {
+      document.getElementById('retryButton').style.display = 'none';
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            document.getElementById('lat').value = lat;
-            document.getElementById('lng').value = lon;
-            const status = document.getElementById('status');
-
-            let goedgekeurd = false;
-            let kortsteAfstand = Infinity;
-
-            for (const locatie of locaties) {
-              const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
-              if (afstand < maxAfstand) {
-                goedgekeurd = true;
-                break;
-              }
-              if (afstand < kortsteAfstand) {
-                kortsteAfstand = afstand;
-              }
-            }
-
-            if (goedgekeurd) {
-              status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
-              document.getElementById('formulier').style.display = 'block';
-            } else {
-              const afgerond = Math.round(kortsteAfstand);
-              status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
-            }
-          },
-          () => {
-            document.getElementById('status').textContent = '📍 We konden je locatie niet vinden of je hebt het geweigerd.';
-          }
+          locatieSucces,
+          locatieMislukt
         );
       } else {
         document.getElementById('status').textContent = '❌ Je apparaat ondersteunt geen GPS.';
       }
+    }
+
+    function retryLocation() {
+      navigator.geolocation.getCurrentPosition(
+        locatieSucces,
+        locatieMisluktFinal
+      );
+    }
+
+    function locatieSucces(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      document.getElementById('lat').value = lat;
+      document.getElementById('lng').value = lon;
+      const status = document.getElementById('status');
+      document.getElementById('retryButton').style.display = 'none';
+
+      let goedgekeurd = false;
+      let kortsteAfstand = Infinity;
+
+      for (const locatie of locaties) {
+        const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
+        if (afstand < maxAfstand) {
+          goedgekeurd = true;
+          break;
+        }
+        if (afstand < kortsteAfstand) {
+          kortsteAfstand = afstand;
+        }
+      }
+
+      if (goedgekeurd) {
+        status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
+        document.getElementById('formulier').style.display = 'block';
+      } else {
+        const afgerond = Math.round(kortsteAfstand);
+        status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
+      }
+    }
+
+    function locatieMislukt() {
+      document.getElementById('status').textContent = '📍 We konden je locatie niet vinden of je hebt het geweigerd. Je kunt het nogmaals proberen:';
+      document.getElementById('retryButton').style.display = 'block';
+    }
+
+    function locatieMisluktFinal() {
+      document.getElementById('status').textContent = '❌ Locatie ophalen lukt niet. Controleer je browserinstellingen en sta locatie delen toe.';
+      document.getElementById('retryButton').style.display = 'none';
     }
 
     function verzenden(event) {
