@@ -1,3 +1,8 @@
+Natuurlijk! Hier is de volledige HTML, precies zoals je wilt:  
+- De eerste keer verschijnt alleen de melding om het opnieuw te proberen.
+- Pas bij de tweede keer verschijnt de extra tip om een andere browser te proberen.
+
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -104,12 +109,14 @@
     }
 
     function locatieMislukt() {
-      document.getElementById('status').textContent = '📍 We konden je locatie niet vinden of je hebt het geweigerd. Je kunt het nogmaals proberen:';
+      document.getElementById('status').textContent =
+        '📍 We konden je locatie niet vinden of je hebt het geweigerd. Probeer het opnieuw.';
       document.getElementById('retryButton').style.display = 'block';
     }
 
     function locatieMisluktFinal() {
-      document.getElementById('status').textContent = '❌ Locatie ophalen lukt niet. Controleer je browserinstellingen en sta locatie delen toe.';
+      document.getElementById('status').textContent =
+        '❌ Locatie ophalen lukt niet. Controleer je browserinstellingen en sta locatie delen toe. Lukt het nog steeds niet? Probeer een andere browser.';
       document.getElementById('retryButton').style.display = 'none';
     }
 
@@ -153,3 +160,6 @@
   </script>
 </body>
 </html>
+```
+
+Deze versie werkt precies zoals je hebt gevraagd!
