@@ -4,12 +4,18 @@
   <title>Check-in voor Praktijkleren (PL1 of PL2)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    :root{
+      --btn: #007bff;
+      --btn-disabled: #a0a0a0;
+      --btn-ok: #28a745;
+    }
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
     input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
     #retryButton { display: none; }
 
+    /* Meldingen */
     #melding {
       display: none;
       padding: 10px;
@@ -19,15 +25,54 @@
     .success { background-color: #d4edda; color: #155724; }
     .error { background-color: #f8d7da; color: #721c24; }
     .info { background-color: #cce5ff; color: #004085; }
+
+    /* Knoppen + laadstaat */
+    .btn {
+      background: var(--btn);
+      color: #fff;
+      border: none;
+      padding: 12px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:disabled {
+      background: var(--btn-disabled);
+      cursor: not-allowed;
+      opacity: 0.9;
+    }
+    .btn-ok {
+      background: var(--btn-ok);
+    }
+
+    .loading-text {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .spinner {
+      width: 1em;
+      height: 1em;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Klein toegankelijkheidsdingetje: laat live-status voor screenreaders horen */
+    [aria-live] { min-height: 1.2em; }
   </style>
 </head>
 <body>
   <h2>Check-in PL1 of PL2</h2>
   <div id="melding"></div>
   <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn locatie</button>
-  <button id="retryButton" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
-  <div id="status"></div>
+
+  <button id="checkButton" class="btn" onclick="checkLocation()">📍 Check mijn locatie</button>
+  <button id="retryButton" class="btn" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
+
+  <div id="status" aria-live="polite"></div>
 
   <div id="formulier">
     <form onsubmit="verzenden(event)">
@@ -41,11 +86,12 @@
       <input type="email" id="email" name="email" required>
       <input type="hidden" id="lat" name="lat">
       <input type="hidden" id="lng" name="lng">
-      <button type="submit">✅ Inchecken</button>
+      <button id="submitButton" type="submit" class="btn">✅ Inchecken</button>
     </form>
   </div>
 
   <script>
+    // ------- Instellingen -------
     const locaties = [
       { lat: 52.0682, lng: 4.3248 },
       { lat: 52.0360341, lng: 4.3623357 },
@@ -53,17 +99,41 @@
     ];
     const maxAfstand = 250;
 
+    // ------- Kleine helpers voor knoppen -------
+    function setLoading(btn, textWhileLoading) {
+      if (!btn) return;
+      btn.dataset.originalText = btn.dataset.originalText || btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-text"><span class="spinner" aria-hidden="true"></span>${textWhileLoading}</span>`;
+    }
+    function clearLoading(btn, restoreText = true) {
+      if (!btn) return;
+      btn.disabled = false;
+      if (restoreText && btn.dataset.originalText) {
+        btn.innerHTML = btn.dataset.originalText;
+      }
+    }
+    function setSuccess(btn, text = "✅ Gelukt") {
+      if (!btn) return;
+      btn.classList.add('btn-ok');
+      btn.disabled = true;
+      btn.innerHTML = text;
+    }
+    function disableForm(form, on) {
+      [...form.elements].forEach(el => el.disabled = on);
+    }
+
+    // ------- Meldingen -------
     function toonMelding(tekst, type) {
       const melding = document.getElementById("melding");
       melding.className = "";
       melding.classList.add(type);
       melding.textContent = tekst;
       melding.style.display = "block";
-      setTimeout(() => {
-        melding.style.display = "none";
-      }, 5000);
+      setTimeout(() => { melding.style.display = "none"; }, 5000);
     }
 
+    // ------- Afstand berekenen -------
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI / 180;
@@ -75,22 +145,30 @@
       return R * c;
     }
 
+    // ------- Locatie check -------
     function checkLocation() {
-      document.getElementById('retryButton').style.display = 'none';
+      const checkBtn = document.getElementById('checkButton');
+      const retryBtn = document.getElementById('retryButton');
+      retryBtn.style.display = 'none';
+      setLoading(checkBtn, "Bezig met locatie ophalen…");
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          locatieSucces,
-          locatieMislukt
+          (pos) => { clearLoading(checkBtn); locatieSucces(pos); },
+          (err)  => { clearLoading(checkBtn); locatieMislukt(err); }
         );
       } else {
+        clearLoading(checkBtn);
         document.getElementById('status').textContent = '❌ Je apparaat ondersteunt geen GPS.';
       }
     }
 
     function retryLocation() {
+      const retryBtn = document.getElementById('retryButton');
+      setLoading(retryBtn, "Nog een keer proberen…");
       navigator.geolocation.getCurrentPosition(
-        locatieSucces,
-        locatieMisluktFinal
+        (pos) => { clearLoading(retryBtn); locatieSucces(pos); },
+        ()    => { clearLoading(retryBtn); locatieMisluktFinal(); }
       );
     }
 
@@ -107,13 +185,8 @@
 
       for (const locatie of locaties) {
         const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
-        if (afstand < maxAfstand) {
-          goedgekeurd = true;
-          break;
-        }
-        if (afstand < kortsteAfstand) {
-          kortsteAfstand = afstand;
-        }
+        if (afstand < maxAfstand) { goedgekeurd = true; break; }
+        if (afstand < kortsteAfstand) { kortsteAfstand = afstand; }
       }
 
       if (goedgekeurd) {
@@ -128,7 +201,8 @@
     function locatieMislukt() {
       document.getElementById('status').textContent =
         '📍 We konden je locatie niet vinden of je hebt het geweigerd. Probeer het opnieuw.';
-      document.getElementById('retryButton').style.display = 'block';
+      const retryBtn = document.getElementById('retryButton');
+      retryBtn.style.display = 'block';
     }
 
     function locatieMisluktFinal() {
@@ -137,8 +211,12 @@
       document.getElementById('retryButton').style.display = 'none';
     }
 
+    // ------- Verzenden met “anti-dubbelklik” -------
+    let isVersturenBezig = false;
+
     function verzenden(event) {
       event.preventDefault();
+      if (isVersturenBezig) return; // vang dubbelklikken af
 
       const vandaag = new Date().toISOString().split("T")[0];
       const laatstIngecheckt = localStorage.getItem("checkin_datum_pl");
@@ -149,12 +227,24 @@
       }
 
       const form = event.target;
+      const submitBtn = document.getElementById('submitButton');
+
+      // Zet formulier/knop in laad-stand
+      isVersturenBezig = true;
+      setLoading(submitBtn, "Bezig met inchecken…");
+      disableForm(form, true); // alles even uit
+
       const formData = new FormData(form);
       formData.append('tijd', new Date().toLocaleString());
 
+      // Extra: simpele timeout (bijv. 10s) zodat UI niet “hangt”
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: controller.signal
       })
       .then(response => response.text())
       .then(text => {
@@ -164,14 +254,30 @@
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
+          setSuccess(submitBtn, "✅ Ingecheckt");
         } else if (text === "AL_GEDAAN_VANDAAG") {
           toonMelding("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).", "info");
+          clearLoading(submitBtn); // weer aanzetten zodat je eventueel kunt sluiten/herproberen
+          disableForm(form, false);
         } else {
           toonMelding("❌ Oei! Het opslaan ging mis.", "error");
+          clearLoading(submitBtn);
+          disableForm(form, false);
         }
       })
       .catch(error => {
-        toonMelding("❌ Foutje bij het versturen: " + error.message, "error");
+        const msg = (error.name === 'AbortError')
+          ? "⏱️ Het duurt te lang. Controleer je internet en probeer opnieuw."
+          : "❌ Foutje bij het versturen: " + error.message;
+        toonMelding(msg, "error");
+        clearLoading(submitBtn);
+        disableForm(form, false);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        // Let op: bij succes blijft knop disabled met “Ingecheckt”.
+        // Bij fout of AL_GEDAAN_VANDAAG hebben we ‘m hierboven al teruggezet.
+        isVersturenBezig = false;
       });
     }
   </script>
